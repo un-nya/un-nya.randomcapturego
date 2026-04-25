@@ -1,0 +1,1314 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Random Capture Go</title>
+  <style>
+    :root {
+      --bg: #f5f2ec;
+      --card: #ffffff;
+      --ink: #1c1917;
+      --muted: #78716c;
+      --line: #d6d3d1;
+      --board1: #f3cd79;
+      --board2: #c98635;
+      --wood-line: #4b2e16;
+      --black: #111827;
+      --white: #f8fafc;
+      --red: #dc2626;
+      --indigo: #4338ca;
+      --amber: #d97706;
+      --green: #047857;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .app {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+      padding: 18px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    h1, h2, h3 { margin: 0; }
+    h1 { font-size: 28px; line-height: 1.1; letter-spacing: -0.03em; }
+    h2 { font-size: 18px; margin-bottom: 12px; }
+    p { margin: 0; line-height: 1.55; }
+    .sub { margin-top: 5px; color: var(--muted); font-size: 14px; }
+
+    .pill {
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-weight: 800;
+      font-size: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.08);
+      white-space: nowrap;
+    }
+    .pill.black { background: #0c0a09; color: white; }
+    .pill.white { background: white; color: #0c0a09; border: 2px solid #0c0a09; }
+    .pill.scoring { background: #b91c1c; color: white; }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .status-box {
+      border-radius: 18px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+    .status-box.dark {
+      background: #0c0a09;
+      color: white;
+      border-color: #0c0a09;
+    }
+    .label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .dark .label { color: #d6d3d1; }
+    .big { font-size: 30px; font-weight: 850; margin-top: 4px; }
+    .small { font-size: 13px; color: var(--muted); }
+    .dark .small { color: #d6d3d1; }
+
+    .action-bar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      background: #fafaf9;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+
+    button, select, input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .05s ease, opacity .15s ease, background .15s ease;
+    }
+    button:active { transform: translateY(1px); }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: .45;
+    }
+    .btn-light {
+      background: white;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    .btn-primary { background: var(--indigo); color: white; }
+    .btn-undo { background: var(--amber); color: white; }
+    .btn-dark { background: #0c0a09; color: white; width: 100%; margin-top: 14px; }
+
+    .near-turn {
+      margin-bottom: 12px;
+      border-radius: 18px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    .near-turn.black {
+      background: #0c0a09;
+      color: white;
+    }
+    .near-turn.white {
+      background: white;
+      color: #0c0a09;
+      border: 2px solid #0c0a09;
+    }
+    .near-turn.scoring {
+      background: #b91c1c;
+      color: white;
+    }
+    .near-turn .near-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      opacity: .75;
+    }
+    .near-turn .near-main {
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 1.1;
+    }
+    .near-turn .near-sub {
+      font-size: 13px;
+      opacity: .8;
+    }
+
+    .notice {
+      border-radius: 18px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.55;
+      margin-bottom: 12px;
+      border: 1px solid transparent;
+    }
+    .notice.red {
+      background: #fef2f2;
+      color: #7f1d1d;
+      border-color: #fecaca;
+    }
+    .notice.indigo {
+      background: #eef2ff;
+      color: #1e1b4b;
+      border-color: #c7d2fe;
+    }
+    .notice.gray {
+      background: #f5f5f4;
+      color: #44403c;
+    }
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .score-tile {
+      background: white;
+      border: 1px solid #c7d2fe;
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .score-tile .value { font-size: 20px; font-weight: 850; margin-top: 2px; }
+
+    .board-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fcd34d;
+      padding: 12px;
+    }
+
+    svg.board {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      border-radius: 14px;
+      background: radial-gradient(circle at 30% 20%, var(--board1), var(--board2));
+      box-shadow: inset 0 2px 8px rgba(0,0,0,.12);
+      user-select: none;
+    }
+
+    .side {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .kv {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #eee;
+      padding: 6px 0;
+      font-size: 14px;
+    }
+    .kv span:last-child { font-weight: 800; }
+
+    .message {
+      margin-top: 12px;
+      background: #f5f5f4;
+      border-radius: 16px;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #44403c;
+    }
+
+    .legend {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+      font-size: 12px;
+      color: #44403c;
+    }
+
+    .legend-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .sample-ring {
+      display: inline-block;
+      width: 28px;
+      height: 14px;
+      border-radius: 999px;
+      border: 3px dashed #111827;
+      background: white;
+      flex: 0 0 auto;
+    }
+    .sample-ring.blackstone {
+      border-color: white;
+      background: #111827;
+      box-shadow: 0 0 0 1px #aaa;
+    }
+    .sample-ring.thick { border-width: 5px; }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    select, input[type="number"] {
+      width: 100%;
+      margin-top: 6px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      background: white;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      .status-grid, .action-bar, .score-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main class="card">
+      <div class="header">
+        <div>
+          <h1>Random Capture Go</h1>
+          <p class="sub">Remove opponent dead chains in alternating turns, then continue as ordinary go.</p>
+        </div>
+        <div id="turnPill" class="pill black">Black to capture</div>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-box dark">
+          <div class="label">Current state</div>
+          <div id="stateBig" class="big">Black</div>
+          <div id="stateSmall" class="small">capture opponent</div>
+        </div>
+        <div class="status-box">
+          <div class="label">Black captured</div>
+          <div id="blackCapturesTop" class="big">0</div>
+          <div class="small">actual captures</div>
+        </div>
+        <div class="status-box">
+          <div class="label">White captured</div>
+          <div id="whiteCapturesTop" class="big">0</div>
+          <div class="small">actual captures</div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button id="passBtn" class="btn-light">Pass opening capture</button>
+        <button id="scoreBtn" class="btn-primary">Select dead stones</button>
+        <button id="undoBtn" class="btn-undo">Undo / Take back</button>
+      </div>
+
+      <div id="nearTurn" class="near-turn black"></div>
+
+      <div id="scoringNotice" class="notice red" style="display:none;"></div>
+      <div id="nearScore" class="notice indigo" style="display:none;"></div>
+
+      <div class="board-wrap">
+        <svg id="boardSvg" class="board" role="img" aria-label="Go board"></svg>
+      </div>
+    </main>
+
+    <aside class="side">
+      <section class="card">
+        <h2>Turn and captures</h2>
+        <div id="sideTurnPill" class="pill black" style="text-align:center; margin-bottom: 12px;">Black to capture</div>
+        <div class="status-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:0;">
+          <div class="status-box dark">
+            <div class="label">Black captures</div>
+            <div id="blackCapturesSide" class="big">0</div>
+          </div>
+          <div class="status-box">
+            <div class="label">White captures</div>
+            <div id="whiteCapturesSide" class="big">0</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Game state</h2>
+        <div id="gameStateList"></div>
+        <div id="message" class="message"></div>
+        <div id="legend" class="legend"></div>
+      </section>
+
+      <section class="card">
+        <h2>Score</h2>
+        <label>
+          Komi
+          <input id="komiInput" type="number" step="0.5" value="6.5" />
+        </label>
+        <div id="scorePanel" class="notice gray"></div>
+      </section>
+
+      <section class="card">
+        <h2>Setup</h2>
+        <label>
+          Board size
+          <select id="sizeSelect">
+            <option value="9">9 × 9</option>
+            <option value="13" selected>13 × 13</option>
+            <option value="19">19 × 19</option>
+          </select>
+        </label>
+        <label>
+          Initial density: <span id="densityLabel">80%</span>
+          <input id="densityRange" type="range" min="55" max="92" value="80" />
+        </label>
+        <button id="newBoardBtn" class="btn-dark">Generate new board</button>
+      </section>
+
+      <section class="card">
+        <h2>Rule implemented</h2>
+        <p class="small">
+          During setup, the current player may remove only opponent-colour chains with zero liberties.
+          If the current player has no legal capture, that pass is made automatically.
+          Two consecutive setup passes start ordinary go.
+          During scoring, players manually mark dead stone groups; those stones are removed only for scoring and added to the opponent's capture count.
+        </p>
+      </section>
+    </aside>
+  </div>
+
+<script>
+const EMPTY = 0;
+const BLACK = 1;
+const WHITE = 2;
+
+let state = {
+  size: 13,
+  density: 0.8,
+  board: [],
+  phase: "setup",
+  turn: BLACK,
+  captures: { black: 0, white: 0 },
+  message: "",
+  positionHistory: new Set(),
+  undoStack: [],
+  passes: 0,
+  komi: 6.5,
+  score: null,
+  selectedDeadKeys: new Set()
+};
+
+function stoneName(v) { return v === BLACK ? "Black" : v === WHITE ? "White" : "Empty"; }
+function nextColor(v) { return v === BLACK ? WHITE : BLACK; }
+function captureKey(v) { return v === BLACK ? "black" : "white"; }
+
+function cloneBoard(board) { return board.map(row => row.slice()); }
+function makeEmptyBoard(size) { return Array.from({ length: size }, () => Array(size).fill(EMPTY)); }
+function boardToKey(board) { return board.map(row => row.join("")).join("/"); }
+function groupToKey(group) {
+  return group.stones.map(([r,c]) => `${r},${c}`).sort().join(";");
+}
+
+function neighborsOf(row, col, size) {
+  const result = [];
+  if (row > 0) result.push([row - 1, col]);
+  if (row < size - 1) result.push([row + 1, col]);
+  if (col > 0) result.push([row, col - 1]);
+  if (col < size - 1) result.push([row, col + 1]);
+  return result;
+}
+
+function getGroup(board, startRow, startCol) {
+  const size = board.length;
+  const color = board[startRow][startCol];
+  if (color === EMPTY) return { color, stones: [], liberties: new Set() };
+
+  const seen = new Set([`${startRow},${startCol}`]);
+  const queue = [[startRow, startCol]];
+  const stones = [];
+  const liberties = new Set();
+
+  while (queue.length) {
+    const [row, col] = queue.shift();
+    stones.push([row, col]);
+
+    for (const [nr, nc] of neighborsOf(row, col, size)) {
+      const value = board[nr][nc];
+      const key = `${nr},${nc}`;
+      if (value === EMPTY) {
+        liberties.add(key);
+      } else if (value === color && !seen.has(key)) {
+        seen.add(key);
+        queue.push([nr, nc]);
+      }
+    }
+  }
+  return { color, stones, liberties };
+}
+
+function getAllGroups(board) {
+  const size = board.length;
+  const visited = new Set();
+  const groups = [];
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (board[row][col] === EMPTY) continue;
+      const key = `${row},${col}`;
+      if (visited.has(key)) continue;
+      const group = getGroup(board, row, col);
+      group.stones.forEach(([r,c]) => visited.add(`${r},${c}`));
+      groups.push(group);
+    }
+  }
+  return groups;
+}
+
+function removeGroup(board, group) {
+  const next = cloneBoard(board);
+  for (const [row, col] of group.stones) next[row][col] = EMPTY;
+  return next;
+}
+
+function findDeadGroups(board) {
+  return getAllGroups(board).filter(group => group.liberties.size === 0);
+}
+
+function findLegalOpeningCaptures(board, turn) {
+  return findDeadGroups(board).filter(group => group.color === nextColor(turn));
+}
+
+function countStones(board) {
+  let black = 0, white = 0, empty = 0;
+  for (const row of board) {
+    for (const v of row) {
+      if (v === BLACK) black++;
+      else if (v === WHITE) white++;
+      else empty++;
+    }
+  }
+  return { black, white, empty };
+}
+
+function calculateTerritory(board) {
+  const size = board.length;
+  const visited = new Set();
+  const regions = [];
+  const territory = { black: 0, white: 0, dame: 0 };
+
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      const startKey = `${row},${col}`;
+      if (board[row][col] !== EMPTY || visited.has(startKey)) continue;
+
+      const queue = [[row, col]];
+      const points = [];
+      const borderingColors = new Set();
+      visited.add(startKey);
+
+      while (queue.length) {
+        const [r, c] = queue.shift();
+        points.push([r, c]);
+
+        for (const [nr, nc] of neighborsOf(r, c, size)) {
+          const value = board[nr][nc];
+          if (value === EMPTY) {
+            const key = `${nr},${nc}`;
+            if (!visited.has(key)) {
+              visited.add(key);
+              queue.push([nr, nc]);
+            }
+          } else {
+            borderingColors.add(value);
+          }
+        }
+      }
+
+      let owner = EMPTY;
+      if (borderingColors.size === 1) {
+        owner = [...borderingColors][0];
+        if (owner === BLACK) territory.black += points.length;
+        if (owner === WHITE) territory.white += points.length;
+      } else {
+        territory.dame += points.length;
+      }
+      regions.push({ owner, points, borderingColors });
+    }
+  }
+  return { ...territory, regions };
+}
+
+function calculateScore(board, captures, komi) {
+  const territory = calculateTerritory(board);
+  const stones = countStones(board);
+  const japanese = {
+    black: territory.black + captures.black,
+    white: territory.white + captures.white + komi
+  };
+  const area = {
+    black: territory.black + stones.black,
+    white: territory.white + stones.white + komi
+  };
+  const japaneseMargin = japanese.black - japanese.white;
+  const areaMargin = area.black - area.white;
+  return {
+    territory,
+    stones,
+    japanese,
+    area,
+    japaneseWinner: japaneseMargin > 0 ? "Black" : japaneseMargin < 0 ? "White" : "Draw",
+    areaWinner: areaMargin > 0 ? "Black" : areaMargin < 0 ? "White" : "Draw",
+    japaneseMargin: Math.abs(japaneseMargin),
+    areaMargin: Math.abs(areaMargin)
+  };
+}
+
+function getSelectedDeadGroups(board, selectedDeadKeys) {
+  return getAllGroups(board).filter(group => selectedDeadKeys.has(groupToKey(group)));
+}
+
+function scoreWithSelectedDeadStones(board, captures, komi, selectedDeadKeys) {
+  let scoringBoard = cloneBoard(board);
+  const scoringCaptures = { ...captures };
+  const deadCounts = { black: 0, white: 0 };
+  const selectedGroups = getSelectedDeadGroups(board, selectedDeadKeys);
+
+  for (const group of selectedGroups) {
+    scoringBoard = removeGroup(scoringBoard, group);
+    if (group.color === BLACK) {
+      deadCounts.black += group.stones.length;
+      scoringCaptures.white += group.stones.length;
+    } else if (group.color === WHITE) {
+      deadCounts.white += group.stones.length;
+      scoringCaptures.black += group.stones.length;
+    }
+  }
+  return { ...calculateScore(scoringBoard, scoringCaptures, komi), scoringBoard, scoringCaptures, selectedGroups, deadCounts };
+}
+
+function generateRandomBoard(size, density) {
+  const board = makeEmptyBoard(size);
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (Math.random() < density) {
+        board[row][col] = Math.random() < 0.5 ? BLACK : WHITE;
+      }
+    }
+  }
+  return board;
+}
+
+function setupGroupLookup(groups) {
+  const lookup = new Map();
+  groups.forEach((group, groupIndex) => {
+    group.stones.forEach(([row, col]) => lookup.set(`${row},${col}`, groupIndex));
+  });
+  return lookup;
+}
+
+function selectedDeadLookup(board, selectedDeadKeys) {
+  const lookup = new Map();
+  for (const group of getSelectedDeadGroups(board, selectedDeadKeys)) {
+    group.stones.forEach(([row, col]) => lookup.set(`${row},${col}`, group.color));
+  }
+  return lookup;
+}
+
+function territoryOwnerLookup(score) {
+  const lookup = new Map();
+  if (!score) return lookup;
+  for (const region of score.territory.regions) {
+    if (region.owner !== BLACK && region.owner !== WHITE) continue;
+    region.points.forEach(([row, col]) => lookup.set(`${row},${col}`, region.owner));
+  }
+  return lookup;
+}
+
+function applyNormalGoMove({ board, row, col, color, positionHistory }) {
+  if (board[row][col] !== EMPTY) return { ok: false, reason: "That intersection is already occupied." };
+
+  const size = board.length;
+  let next = cloneBoard(board);
+  next[row][col] = color;
+
+  let captured = 0;
+  const checkedOpponentGroups = new Set();
+  for (const [nr, nc] of neighborsOf(row, col, size)) {
+    if (next[nr][nc] !== nextColor(color)) continue;
+    const group = getGroup(next, nr, nc);
+    const key = groupToKey(group);
+    if (checkedOpponentGroups.has(key)) continue;
+    checkedOpponentGroups.add(key);
+    if (group.liberties.size === 0) {
+      captured += group.stones.length;
+      next = removeGroup(next, group);
+    }
+  }
+
+  const ownGroup = getGroup(next, row, col);
+  if (ownGroup.liberties.size === 0) return { ok: false, reason: "Suicide is not allowed." };
+
+  const key = boardToKey(next);
+  if (positionHistory.has(key)) return { ok: false, reason: "This move repeats a previous board position." };
+
+  return { ok: true, board: next, captured };
+}
+
+function coordLabel(index) {
+  const letters = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+  return letters[index] || String(index + 1);
+}
+
+function formatMargin(winner, margin) {
+  if (winner === "Draw") return "Draw";
+  return `${winner} +${Number(margin).toFixed(1).replace(/\.0$/, "")}`;
+}
+
+function turnLabel(phase, turn, legalOpeningCaptureCount) {
+  if (phase === "setup") return legalOpeningCaptureCount > 0 ? `${stoneName(turn)} to capture` : `${stoneName(turn)} must pass`;
+  if (phase === "play") return `${stoneName(turn)} to play`;
+  if (phase === "scoring") return "Select dead stones";
+  return "Game finished";
+}
+
+function makeOpeningMessage(board, turn) {
+  const legalCount = findLegalOpeningCaptures(board, turn).length;
+  if (legalCount > 0) return `${stoneName(turn)} must capture one highlighted ${stoneName(nextColor(turn)).toLowerCase()} dead chain.`;
+  return `${stoneName(turn)} has no capturable opponent dead chain and must pass.`;
+}
+
+function snapshot() {
+  return {
+    board: cloneBoard(state.board),
+    phase: state.phase,
+    turn: state.turn,
+    captures: { ...state.captures },
+    positionHistory: new Set(state.positionHistory),
+    passes: state.passes,
+    score: state.score,
+    message: state.message,
+    selectedDeadKeys: new Set(state.selectedDeadKeys)
+  };
+}
+
+function pushUndoSnapshot() {
+  state.undoStack.push(snapshot());
+  if (state.undoStack.length > 200) state.undoStack.shift();
+}
+
+function undoLastAction() {
+  if (state.undoStack.length === 0) {
+    state.message = "There is no previous action to undo.";
+    render();
+    return;
+  }
+  const s = state.undoStack.pop();
+  state.board = cloneBoard(s.board);
+  state.phase = s.phase;
+  state.turn = s.turn;
+  state.captures = { ...s.captures };
+  state.positionHistory = new Set(s.positionHistory);
+  state.passes = s.passes;
+  state.score = s.score;
+  state.selectedDeadKeys = new Set(s.selectedDeadKeys);
+  state.message = `Undid the previous action. ${s.message}`;
+  render();
+}
+
+function resetGame(size = state.size, density = state.density) {
+  const board = generateRandomBoard(size, density);
+  state = {
+    ...state,
+    size,
+    density,
+    board,
+    phase: "setup",
+    turn: BLACK,
+    captures: { black: 0, white: 0 },
+    message: makeOpeningMessage(board, BLACK),
+    positionHistory: new Set(),
+    undoStack: [],
+    passes: 0,
+    score: null,
+    selectedDeadKeys: new Set()
+  };
+  autoAdvanceOpeningPasses();
+  render();
+}
+
+function startNormalPlay(currentBoard = state.board, startingTurn = state.turn) {
+  state.phase = "play";
+  state.turn = startingTurn;
+  state.passes = 0;
+  state.positionHistory = new Set([boardToKey(currentBoard)]);
+  state.score = null;
+  state.selectedDeadKeys = new Set();
+  state.message = `Normal go has begun. ${stoneName(startingTurn)} to play.`;
+}
+
+function autoAdvanceOpeningPasses(prefixMessage = "") {
+  if (state.phase !== "setup") return;
+
+  const messages = [];
+  let guard = 0;
+
+  while (state.phase === "setup" && guard < 4) {
+    const legal = findLegalOpeningCaptures(state.board, state.turn);
+    if (legal.length > 0) break;
+
+    const currentTurn = state.turn;
+    const nextTurn = nextColor(currentTurn);
+    state.passes += 1;
+    state.score = null;
+    state.selectedDeadKeys = new Set();
+    messages.push(`${stoneName(currentTurn)} had no capturable opponent dead chain and passed automatically.`);
+
+    if (state.passes >= 2) {
+      startNormalPlay(state.board, nextTurn);
+      state.message = [prefixMessage, ...messages, `Normal go has begun. ${stoneName(nextTurn)} to play.`]
+        .filter(Boolean)
+        .join(" ");
+      return;
+    }
+
+    state.turn = nextTurn;
+    guard += 1;
+  }
+
+  if (state.phase === "setup") {
+    const openingMessage = makeOpeningMessage(state.board, state.turn);
+    state.message = [prefixMessage, ...messages, openingMessage].filter(Boolean).join(" ");
+  }
+}
+
+function enterScoringMode() {
+  if (state.phase === "setup") {
+    state.message = "Finish the opening capture phase before scoring.";
+    render();
+    return;
+  }
+  if (state.phase !== "scoring") pushUndoSnapshot();
+  state.phase = "scoring";
+  state.score = null;
+  state.message = "Dead-stone selection mode: click any dead group to mark or unmark it, then press Recalculate score.";
+  render();
+}
+
+function computeScore() {
+  state.score = scoreWithSelectedDeadStones(state.board, state.captures, state.komi, state.selectedDeadKeys);
+  state.message = `Score recalculated after dead-stone selection. Japanese-style result: ${formatMargin(state.score.japaneseWinner, state.score.japaneseMargin)}.`;
+  render();
+}
+
+function handleScoreButton() {
+  if (state.phase === "scoring") computeScore();
+  else enterScoringMode();
+}
+
+function handleOpeningPass() {
+  if (state.phase !== "setup") return;
+
+  const legal = findLegalOpeningCaptures(state.board, state.turn);
+  if (legal.length > 0) {
+    state.message = `${stoneName(state.turn)} cannot pass while a capturable ${stoneName(nextColor(state.turn)).toLowerCase()} dead chain remains.`;
+    render();
+    return;
+  }
+
+  autoAdvanceOpeningPasses();
+  render();
+}
+
+function toggleDeadSelection(row, col) {
+  if (state.board[row][col] === EMPTY) {
+    state.message = "Select a stone group, not an empty point, when marking dead stones.";
+    render();
+    return;
+  }
+
+  pushUndoSnapshot();
+
+  const group = getGroup(state.board, row, col);
+  const key = groupToKey(group);
+  const next = new Set(state.selectedDeadKeys);
+  if (next.has(key)) {
+    next.delete(key);
+    state.message = `Unmarked a ${stoneName(group.color).toLowerCase()} group of ${group.stones.length} stone(s). Press Recalculate score when ready.`;
+  } else {
+    next.add(key);
+    state.message = `Marked a ${stoneName(group.color).toLowerCase()} group of ${group.stones.length} stone(s) as dead. Press Recalculate score when ready.`;
+  }
+  state.selectedDeadKeys = next;
+  state.score = null;
+  render();
+}
+
+function handleIntersectionClick(row, col) {
+  if (state.phase === "scoring") {
+    toggleDeadSelection(row, col);
+    return;
+  }
+
+  if (state.phase === "setup") {
+    const deadGroups = findDeadGroups(state.board);
+    const legalOpeningCaptures = deadGroups.filter(group => group.color === nextColor(state.turn));
+    const deadLookup = setupGroupLookup(legalOpeningCaptures);
+
+    if (legalOpeningCaptures.length === 0) {
+      state.message = `${stoneName(state.turn)} has no capturable opponent dead chain and must pass.`;
+      render();
+      return;
+    }
+
+    const groupIndex = deadLookup.get(`${row},${col}`);
+    if (groupIndex === undefined) {
+      state.message = `${stoneName(state.turn)} may capture only highlighted ${stoneName(nextColor(state.turn)).toLowerCase()} dead chains.`;
+      render();
+      return;
+    }
+
+    pushUndoSnapshot();
+
+    const group = legalOpeningCaptures[groupIndex];
+    const currentTurn = state.turn;
+    const nextTurn = nextColor(currentTurn);
+    const removedCount = group.stones.length;
+    const nextBoard = removeGroup(state.board, group);
+
+    state.board = nextBoard;
+    state.score = null;
+    state.selectedDeadKeys = new Set();
+    state.passes = 0;
+    state.captures = {
+      ...state.captures,
+      [captureKey(currentTurn)]: state.captures[captureKey(currentTurn)] + removedCount
+    };
+    state.turn = nextTurn;
+    autoAdvanceOpeningPasses(`${stoneName(currentTurn)} captured a ${stoneName(group.color).toLowerCase()} dead chain of ${removedCount} stone(s).`);
+    render();
+    return;
+  }
+
+  if (state.phase === "finished") return;
+
+  const result = applyNormalGoMove({
+    board: state.board,
+    row,
+    col,
+    color: state.turn,
+    positionHistory: state.positionHistory
+  });
+
+  if (!result.ok) {
+    state.message = result.reason;
+    render();
+    return;
+  }
+
+  pushUndoSnapshot();
+
+  const nextPositionHistory = new Set(state.positionHistory);
+  nextPositionHistory.add(boardToKey(result.board));
+
+  state.board = result.board;
+  state.positionHistory = nextPositionHistory;
+  state.score = null;
+  state.selectedDeadKeys = new Set();
+  state.captures = {
+    ...state.captures,
+    [captureKey(state.turn)]: state.captures[captureKey(state.turn)] + result.captured
+  };
+  state.passes = 0;
+  const currentTurn = state.turn;
+  state.turn = nextColor(state.turn);
+  state.message = result.captured > 0
+    ? `${stoneName(currentTurn)} captured ${result.captured} stone(s). ${stoneName(state.turn)} to play.`
+    : `${stoneName(state.turn)} to play.`;
+  render();
+}
+
+function passTurn() {
+  if (state.phase === "setup") {
+    handleOpeningPass();
+    return;
+  }
+
+  if (state.phase === "scoring") {
+    state.message = "Scoring mode is active. Mark dead stones or press Recalculate score.";
+    render();
+    return;
+  }
+
+  if (state.phase !== "play") return;
+
+  pushUndoSnapshot();
+
+  const currentTurn = state.turn;
+  const nextPasses = state.passes + 1;
+  if (nextPasses >= 2) {
+    state.passes = nextPasses;
+    state.phase = "scoring";
+    state.score = null;
+    state.selectedDeadKeys = new Set();
+    state.message = "Both players passed. Dead-stone selection mode begins: click dead groups, then press Recalculate score.";
+    render();
+    return;
+  }
+  state.passes = nextPasses;
+  state.turn = nextColor(state.turn);
+  state.score = null;
+  state.selectedDeadKeys = new Set();
+  state.message = `${stoneName(currentTurn)} passed. ${stoneName(state.turn)} to play.`;
+  render();
+}
+
+function svgEl(name, attrs = {}) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+  return el;
+}
+
+function addText(svg, text, attrs = {}) {
+  const el = svgEl("text", attrs);
+  el.textContent = text;
+  svg.appendChild(el);
+  return el;
+}
+
+function renderBoard({ deadLookup, opponentDeadLookup, selectedDeadStoneLookup, scoredTerritoryLookup }) {
+  const svg = document.getElementById("boardSvg");
+  svg.innerHTML = "";
+
+  const size = state.size;
+  const boardPixels = Math.min(680, Math.max(420, size * 34));
+  const margin = 32;
+  const cell = (boardPixels - margin * 2) / (size - 1);
+  svg.setAttribute("width", boardPixels);
+  svg.setAttribute("height", boardPixels);
+  svg.setAttribute("viewBox", `0 0 ${boardPixels} ${boardPixels}`);
+
+  for (let i = 0; i < size; i++) {
+    const pos = margin + i * cell;
+    svg.appendChild(svgEl("line", { x1: margin, y1: pos, x2: boardPixels - margin, y2: pos, stroke: "#4b2e16", "stroke-width": 1.2 }));
+    svg.appendChild(svgEl("line", { x1: pos, y1: margin, x2: pos, y2: boardPixels - margin, stroke: "#4b2e16", "stroke-width": 1.2 }));
+    addText(svg, String(size - i), { x: margin - 18, y: pos + 4, "text-anchor": "middle", fill: "#57534e", "font-size": 10 });
+    addText(svg, coordLabel(i), { x: pos, y: boardPixels - margin + 22, "text-anchor": "middle", fill: "#57534e", "font-size": 10 });
+  }
+
+  const starPoints = size === 19 ? [3,9,15] : size === 13 ? [3,6,9] : size === 9 ? [2,4,6] : [];
+  for (const r of starPoints) {
+    for (const c of starPoints) {
+      svg.appendChild(svgEl("circle", { cx: margin + c * cell, cy: margin + r * cell, r: 4, fill: "#4b2e16" }));
+    }
+  }
+
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      const value = state.board[row][col];
+      const x = margin + col * cell;
+      const y = margin + row * cell;
+      const radius = Math.max(9, cell * 0.43);
+      const key = `${row},${col}`;
+
+      const g = svgEl("g");
+      g.style.cursor = "pointer";
+      g.addEventListener("click", () => handleIntersectionClick(row, col));
+      g.appendChild(svgEl("circle", { cx: x, cy: y, r: Math.max(13, cell * 0.48), fill: "transparent" }));
+
+      const territoryOwner = scoredTerritoryLookup.get(key);
+      const isSelectedDead = selectedDeadStoneLookup.has(key);
+
+      if (territoryOwner && (value === EMPTY || isSelectedDead)) {
+        addText(g, territoryOwner === BLACK ? "●" : "○", {
+          x, y: y + 4, "text-anchor": "middle",
+          fill: territoryOwner === BLACK ? "#111827" : "#ffffff",
+          stroke: territoryOwner === WHITE ? "#334155" : "none",
+          "stroke-width": territoryOwner === WHITE ? 0.8 : 0,
+          "font-size": 12, "font-weight": "bold"
+        });
+      }
+
+      if (value !== EMPTY) {
+        g.appendChild(svgEl("circle", {
+          cx: x, cy: y, r: radius,
+          fill: value === BLACK ? "#111827" : "#f8fafc",
+          stroke: value === BLACK ? "#020617" : "#334155",
+          "stroke-width": 1.2,
+          opacity: isSelectedDead ? 0.42 : 1
+        }));
+        g.appendChild(svgEl("circle", {
+          cx: x - radius * 0.28, cy: y - radius * 0.28, r: radius * 0.23,
+          fill: value === BLACK ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.9)",
+          opacity: isSelectedDead ? 0.35 : 1
+        }));
+
+        const isLegalOpeningCapture = deadLookup.has(key);
+        const isOpponentOpeningCapture = opponentDeadLookup.has(key);
+
+        if ((isLegalOpeningCapture || isOpponentOpeningCapture) && state.phase === "setup") {
+          const strokeWidth = isLegalOpeningCapture ? 6 : 4;
+          if (value === BLACK) {
+            g.appendChild(svgEl("circle", {
+              cx: x, cy: y, r: radius + 7, fill: "none", stroke: "#111827",
+              "stroke-width": isLegalOpeningCapture ? 1.5 : 1.2,
+              "stroke-dasharray": "6 4"
+            }));
+          }
+          g.appendChild(svgEl("circle", {
+            cx: x, cy: y, r: radius + 4, fill: "none",
+            stroke: value === BLACK ? "#ffffff" : "#111827",
+            "stroke-width": strokeWidth,
+            "stroke-dasharray": "6 4"
+          }));
+        }
+
+        if (isSelectedDead && state.phase === "scoring") {
+          g.appendChild(svgEl("circle", { cx: x, cy: y, r: radius + 6, fill: "none", stroke: "#dc2626", "stroke-width": 3 }));
+          g.appendChild(svgEl("line", { x1: x - radius * .75, y1: y - radius * .75, x2: x + radius * .75, y2: y + radius * .75, stroke: "#dc2626", "stroke-width": 4, "stroke-linecap": "round" }));
+          g.appendChild(svgEl("line", { x1: x + radius * .75, y1: y - radius * .75, x2: x - radius * .75, y2: y + radius * .75, stroke: "#dc2626", "stroke-width": 4, "stroke-linecap": "round" }));
+        }
+      } else if (state.phase === "play") {
+        const hover = svgEl("circle", { cx: x, cy: y, r: Math.max(6, cell * .18), fill: "rgba(0,0,0,0)" });
+        hover.addEventListener("mouseenter", () => hover.setAttribute("fill", "rgba(0,0,0,.16)"));
+        hover.addEventListener("mouseleave", () => hover.setAttribute("fill", "rgba(0,0,0,0)"));
+        g.appendChild(hover);
+      }
+
+      svg.appendChild(g);
+    }
+  }
+}
+
+function renderScoreNear() {
+  const el = document.getElementById("nearScore");
+  if (!state.score) {
+    el.style.display = "none";
+    el.innerHTML = "";
+    return;
+  }
+  const s = state.score;
+  el.style.display = "block";
+  el.innerHTML = `
+    <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div>
+        <div style="font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:#4338ca;">Calculated result</div>
+        <div style="font-size:26px; font-weight:900;">${formatMargin(s.japaneseWinner, s.japaneseMargin)}</div>
+      </div>
+      <div style="background:white; border:1px solid #c7d2fe; border-radius:999px; padding:8px 14px; font-weight:800;">Japanese-style score</div>
+    </div>
+    <div class="score-grid">
+      <div class="score-tile"><div class="label">Black total</div><div class="value">${s.japanese.black}</div></div>
+      <div class="score-tile"><div class="label">White total</div><div class="value">${s.japanese.white}</div></div>
+      <div class="score-tile"><div class="label">Territory B / W</div><div class="value">${s.territory.black} / ${s.territory.white}</div></div>
+      <div class="score-tile"><div class="label">Dead B / W</div><div class="value">${s.deadCounts.black} / ${s.deadCounts.white}</div></div>
+    </div>
+  `;
+}
+
+function renderScoringNotice(markedDeadBlack, markedDeadWhite) {
+  const el = document.getElementById("scoringNotice");
+  if (state.phase !== "scoring") {
+    el.style.display = "none";
+    el.innerHTML = "";
+    return;
+  }
+  el.style.display = "block";
+  el.innerHTML = `
+    <strong>Dead-stone selection mode</strong><br>
+    Click a stone group to mark or unmark it as dead. Marked dead stones are shown with a red X.
+    Then press Recalculate score.
+    <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px;">
+      <div style="background:white; border-radius:12px; padding:8px; border:1px solid #fecaca;">Marked dead black stones: <strong>${markedDeadBlack}</strong></div>
+      <div style="background:white; border-radius:12px; padding:8px; border:1px solid #fecaca;">Marked dead white stones: <strong>${markedDeadWhite}</strong></div>
+    </div>
+  `;
+}
+
+function renderScorePanel() {
+  const el = document.getElementById("scorePanel");
+  if (!state.score) {
+    el.innerHTML = `Press Select dead stones beside the board, mark dead groups, and then press Recalculate score. Marked dead stones are removed only on the scoring board and are added to the opponent's capture count.`;
+    return;
+  }
+  const s = state.score;
+  el.innerHTML = `
+    <strong>Japanese-style territory score</strong>
+    <div class="kv"><span>Black territory</span><span>${s.territory.black}</span></div>
+    <div class="kv"><span>White territory</span><span>${s.territory.white}</span></div>
+    <div class="kv"><span>Dame / neutral</span><span>${s.territory.dame}</span></div>
+    <div class="kv"><span>Dead black added to White</span><span>${s.deadCounts.black}</span></div>
+    <div class="kv"><span>Dead white added to Black</span><span>${s.deadCounts.white}</span></div>
+    <div class="kv"><span>Black final captures</span><span>${s.scoringCaptures.black}</span></div>
+    <div class="kv"><span>White final captures</span><span>${s.scoringCaptures.white}</span></div>
+    <div class="kv"><span>Black total</span><span>${s.japanese.black}</span></div>
+    <div class="kv"><span>White total</span><span>${s.japanese.white}</span></div>
+    <p style="margin-top:10px; font-weight:900;">Result: ${formatMargin(s.japaneseWinner, s.japaneseMargin)}</p>
+    <hr style="border:0; border-top:1px solid #ddd; margin:12px 0;">
+    <strong>Area-score reference</strong>
+    <div class="kv"><span>Black area</span><span>${s.area.black}</span></div>
+    <div class="kv"><span>White area</span><span>${s.area.white}</span></div>
+    <p style="margin-top:10px; font-weight:800;">Result: ${formatMargin(s.areaWinner, s.areaMargin)}</p>
+  `;
+}
+
+function render() {
+  const deadGroups = state.phase === "setup" ? findDeadGroups(state.board) : [];
+  const legalOpeningCaptures = state.phase === "setup" ? deadGroups.filter(g => g.color === nextColor(state.turn)) : [];
+  const opponentOpeningCaptures = state.phase === "setup" ? deadGroups.filter(g => g.color === state.turn) : [];
+  const deadLookup = setupGroupLookup(legalOpeningCaptures);
+  const opponentDeadLookup = setupGroupLookup(opponentOpeningCaptures);
+  const selectedDeadStoneLookup = selectedDeadLookup(state.board, state.selectedDeadKeys);
+  const scoredTerritoryLookup = territoryOwnerLookup(state.score);
+  const counts = countStones(state.board);
+  const markedDeadBlack = [...selectedDeadStoneLookup.values()].filter(color => color === BLACK).length;
+  const markedDeadWhite = [...selectedDeadStoneLookup.values()].filter(color => color === WHITE).length;
+
+  const pillClass = state.phase === "scoring" ? "pill scoring" : state.turn === BLACK ? "pill black" : "pill white";
+  const label = turnLabel(state.phase, state.turn, legalOpeningCaptures.length);
+
+  for (const id of ["turnPill", "sideTurnPill"]) {
+    const el = document.getElementById(id);
+    el.className = pillClass;
+    if (id === "sideTurnPill") el.style.textAlign = "center";
+    el.textContent = label;
+  }
+
+  const nearTurn = document.getElementById("nearTurn");
+  const nearTurnClass = state.phase === "scoring" ? "near-turn scoring" : state.turn === BLACK ? "near-turn black" : "near-turn white";
+  const nearSub =
+    state.phase === "setup" ? (legalOpeningCaptures.length > 0 ? `Capture highlighted ${stoneName(nextColor(state.turn)).toLowerCase()} stones` : "Auto-pass active") :
+    state.phase === "play" ? "Place a stone or pass" :
+    state.phase === "scoring" ? "Click dead groups, then recalculate" :
+    "Game ended";
+  nearTurn.className = nearTurnClass;
+  nearTurn.innerHTML = `
+    <div>
+      <div class="near-label">Current turn near board</div>
+      <div class="near-main">${label}</div>
+    </div>
+    <div class="near-sub">${nearSub}</div>
+  `;
+
+  document.getElementById("stateBig").textContent = state.phase === "scoring" ? "Scoring" : state.phase === "finished" ? "Finished" : stoneName(state.turn);
+  document.getElementById("stateSmall").textContent =
+    state.phase === "setup" ? (legalOpeningCaptures.length > 0 ? "capture opponent" : "must pass") :
+    state.phase === "play" ? "normal move" :
+    state.phase === "scoring" ? "mark dead stones" : "no move";
+
+  document.getElementById("blackCapturesTop").textContent = state.captures.black;
+  document.getElementById("whiteCapturesTop").textContent = state.captures.white;
+  document.getElementById("blackCapturesSide").textContent = state.captures.black;
+  document.getElementById("whiteCapturesSide").textContent = state.captures.white;
+
+  const passBtn = document.getElementById("passBtn");
+  passBtn.textContent = state.phase === "setup" ? "Auto-pass enabled" : "Pass";
+  passBtn.disabled = state.phase === "finished" || state.phase === "scoring" || (state.phase === "setup" && legalOpeningCaptures.length > 0);
+
+  const scoreBtn = document.getElementById("scoreBtn");
+  scoreBtn.textContent = state.phase === "scoring" ? "Recalculate score" : "Select dead stones";
+  scoreBtn.disabled = state.phase === "setup";
+
+  document.getElementById("undoBtn").disabled = state.undoStack.length === 0;
+
+  document.getElementById("gameStateList").innerHTML = `
+    <div class="kv"><span>Phase</span><span>${state.phase}</span></div>
+    <div class="kv"><span>All dead chains</span><span>${state.phase === "setup" ? deadGroups.length : 0}</span></div>
+    <div class="kv"><span>Legal captures now</span><span>${state.phase === "setup" ? legalOpeningCaptures.length : 0}</span></div>
+    <div class="kv"><span>Opponent captures next</span><span>${state.phase === "setup" ? opponentOpeningCaptures.length : 0}</span></div>
+    <div class="kv"><span>Opening passes in row</span><span>${state.phase === "setup" ? state.passes : 0}</span></div>
+    <div class="kv"><span>Marked dead black</span><span>${markedDeadBlack}</span></div>
+    <div class="kv"><span>Marked dead white</span><span>${markedDeadWhite}</span></div>
+    <div class="kv"><span>Undo steps</span><span>${state.undoStack.length}</span></div>
+    <div class="kv"><span>Black stones</span><span>${counts.black}</span></div>
+    <div class="kv"><span>White stones</span><span>${counts.white}</span></div>
+    <div class="kv"><span>Empty points</span><span>${counts.empty}</span></div>
+  `;
+  document.getElementById("message").textContent = state.message;
+
+  const legend = document.getElementById("legend");
+  if (state.phase === "setup") {
+    legend.innerHTML = `
+      <div class="legend-row"><span class="sample-ring"></span><span>White stones are marked with black dashed rings.</span></div>
+      <div class="legend-row"><span class="sample-ring blackstone"></span><span>Black stones are marked with white dashed rings.</span></div>
+      <div class="legend-row"><span class="sample-ring thick"></span><span>The current player's legal captures use the thicker ring.</span></div>
+    `;
+  } else {
+    legend.innerHTML = "";
+  }
+
+  document.getElementById("komiInput").value = state.komi;
+  document.getElementById("sizeSelect").value = state.size;
+  document.getElementById("densityRange").value = Math.round(state.density * 100);
+  document.getElementById("densityLabel").textContent = `${Math.round(state.density * 100)}%`;
+
+  renderScoringNotice(markedDeadBlack, markedDeadWhite);
+  renderScoreNear();
+  renderScorePanel();
+  renderBoard({ deadLookup, opponentDeadLookup, selectedDeadStoneLookup, scoredTerritoryLookup });
+}
+
+document.getElementById("passBtn").addEventListener("click", passTurn);
+document.getElementById("scoreBtn").addEventListener("click", handleScoreButton);
+document.getElementById("undoBtn").addEventListener("click", undoLastAction);
+document.getElementById("newBoardBtn").addEventListener("click", () => resetGame(state.size, state.density));
+document.getElementById("sizeSelect").addEventListener("change", (e) => resetGame(Number(e.target.value), state.density));
+document.getElementById("densityRange").addEventListener("input", (e) => {
+  state.density = Number(e.target.value) / 100;
+  document.getElementById("densityLabel").textContent = `${e.target.value}%`;
+});
+document.getElementById("komiInput").addEventListener("input", (e) => {
+  const value = Number(e.target.value);
+  state.komi = Number.isFinite(value) ? value : 0;
+  state.score = null;
+  render();
+});
+
+resetGame(13, 0.8);
+</script>
+</body>
+</html>
